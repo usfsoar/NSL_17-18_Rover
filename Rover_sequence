@@ -1,0 +1,178 @@
+String readString;
+
+int MD_PWM1 = 8;        //Motor 1 Pins
+int MD_FWD1 = 23;
+int MD_BWD1 = 22;
+int MD_PWM2 = 9;       //Motor 2 Pins
+int MD_FWD2 = 24;
+int MD_BWD2 = 25;
+int wheelTimer = 0;     //Motor 1/2 Controls
+int LeftSpeed = 256;
+int RightSpeed = 256;
+int LegTrigger = 30;    //Relay Pins & Controls
+int SolarTrigger = 31;
+int WheelTrigger = 32;
+int eMatchTimer = 0;
+int tiltSwitch1 = 40;    //Mercury Switch Pins & Controls
+int tiltSwitch2 = 41;
+int tiltVal1, tiltVal2;
+
+//All the voids
+void Activated();
+void Left();
+void Right();
+void Forward();
+void Backward();
+void LegDeploy();
+void SolarDeploy();
+void WheelDeploy();
+void Orientate();
+
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("rover is ready");
+
+  
+  pinMode(MD_PWM1, OUTPUT);
+  pinMode(MD_FWD1, OUTPUT);
+  pinMode(MD_BWD1, OUTPUT);
+  pinMode(MD_PWM2, OUTPUT);
+  pinMode(MD_FWD2, OUTPUT);
+  pinMode(MD_BWD2, OUTPUT);
+  
+  pinMode (tiltSwitch1, INPUT) ;// define the mercury tilt switch sensor output interface
+  pinMode (tiltSwitch2, INPUT);
+
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  analogWrite(MD_PWM1, 256);
+  analogWrite(MD_PWM2, 256); 
+  
+  digitalWrite(SolarTrigger, HIGH); //High is off for relays
+  digitalWrite(LegTrigger, HIGH);
+  digitalWrite(WheelTrigger, HIGH);
+  
+}
+void loop() { 
+  while (Serial.available()) {                     //as long as there is data on incoming serial buffer...
+    //Characers are read from the serial buffer and concatinated 
+    char c = Serial.read();
+    readString += c;
+    delay(2);
+  }
+  if(readString ==" rover deployed."){
+    delay(5000);
+      Serial.println("Rover activated... leggo"); 
+      Activated();
+      }
+      else Serial.println(readString);
+      readString="";
+}
+
+void Activated() {
+    
+  eMatchTimer = 1*1000;    //Activates ematch in a void (1 sec of power)
+  WheelDeploy();          
+  delay(3*1000);          //3 sec pause
+  
+  Serial.println("(Would be orientating)");
+ // Orientate();            
+  delay(5000);
+  
+  
+  eMatchTimer = 1*1000;
+  LegDeploy();
+  delay(2000);
+  
+  wheelTimer = 20*1000;
+  Forward();              //Rotates the body until its upright
+  
+  
+  eMatchTimer = 1*1000;    //Deploys solar panel (1 sec of power)
+  SolarDeploy();
+  delay(5000);
+  Serial.println("mission success.....I'm out");
+  exit(0);
+}
+
+void Forward() {   // Both wheels forward
+  Serial.println("Going forward...");
+  digitalWrite(MD_FWD1, HIGH);  
+  digitalWrite(MD_BWD1, LOW);
+  digitalWrite(MD_FWD2, HIGH);  
+  digitalWrite(MD_BWD2, LOW);
+  delay(wheelTimer);
+  return;
+}
+void Backward() {   //Both wheels backward
+  digitalWrite(MD_FWD1, LOW);  
+  digitalWrite(MD_BWD1, HIGH);
+  digitalWrite(MD_FWD2, LOW);  
+  digitalWrite(MD_BWD2, HIGH);
+  delay(wheelTimer);
+  return;
+}
+void Right() {      //Left wheel(1) forward, right(2) backward
+  digitalWrite(MD_FWD1, HIGH);  
+  digitalWrite(MD_BWD1, LOW);
+  digitalWrite(MD_FWD2, LOW);  
+  digitalWrite(MD_BWD2, HIGH);
+  delay(wheelTimer);
+  return;
+}
+void Left() {      //Left wheel(1) backward, right(2) forward
+  digitalWrite(MD_FWD1, LOW);  
+  digitalWrite(MD_BWD1, HIGH);
+  digitalWrite(MD_FWD2, HIGH);  
+  digitalWrite(MD_BWD2, LOW);
+  delay(wheelTimer);
+  return;
+}
+  
+  void Orientate(){
+  tiltVal1 = digitalRead (tiltSwitch1) ;// read the switch value
+  tiltVal2 = digitalRead (tiltSwitch2);
+  
+  if (tiltVal1 == HIGH && tiltVal2 == HIGH) // Means we've tilted
+  {
+      Serial.println("damn good, next");
+      return;
+  } 
+  else 
+  {
+    while (!(tiltVal1 == HIGH && tiltVal2 == HIGH)){
+    digitalWrite(MD_FWD1, HIGH);  
+    digitalWrite(MD_BWD1, LOW);
+    digitalWrite(MD_FWD2, HIGH);  
+    digitalWrite(MD_BWD2, LOW);    
+    Serial.println("no bueno, rotating");
+    
+    tiltVal1 = digitalRead (tiltSwitch1) ;// read the switch value
+    tiltVal2 = digitalRead (tiltSwitch2);
+    }
+    Serial.println("jk now we good");
+    return;
+    }
+  }    
+
+void SolarDeploy() {
+  digitalWrite(SolarTrigger, LOW);  
+  Serial.println("Last thing bby");
+  delay(eMatchTimer);
+  Serial.println("DUB SZN");
+  digitalWrite(SolarTrigger, HIGH);
+}
+void LegDeploy() {
+  Serial.println("Leg day begin");
+  digitalWrite(LegTrigger, LOW);  
+  delay(eMatchTimer);
+  Serial.println("Leg day's over");
+  digitalWrite(LegTrigger, HIGH);
+}
+void WheelDeploy() {
+  digitalWrite(WheelTrigger, LOW);  
+  delay(eMatchTimer);
+  Serial.println("Wheels open");
+  digitalWrite(WheelTrigger, HIGH);
+}
